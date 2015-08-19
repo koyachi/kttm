@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -77,13 +78,33 @@ func decodeImage(filePath string) (img image.Image, err error) {
 	return
 }
 
+func guessDivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err error) {
+	var results []EmptyLinesRange
+	for _, r := range emptyRanges {
+		if r.length > 30 {
+			results = append(results, r)
+		}
+	}
+	if len(results) == 0 {
+		return nil, errors.New("not found")
+	}
+	return results, nil
+}
+
 func main() {
 	img, err := decodeImage("../tmp/keepingtwo01.gif")
 	if err != nil {
 		fmt.Printf("err = %v\n", err)
 		return
 	}
-	for i, r := range columnGaps(img) {
+	emptyLinesRanges := columnGaps(img)
+	for i, r := range emptyLinesRanges {
 		fmt.Printf("%d: EmptyLinesRange(index=%d, length=%d)\n", i, r.index, r.length)
 	}
+	r, err := guessDivideColumns(emptyLinesRanges)
+	if err != nil {
+		fmt.Printf("err = %v\n", err)
+		return
+	}
+	fmt.Printf("guessed column: \v\n", r)
 }
