@@ -4,10 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
+	"image/draw"
 	_ "image/gif"
-	_ "image/jpeg"
+	"image/jpeg"
 	_ "image/png"
+	"log"
 	"os"
+	"path/filepath"
 )
 
 type EmptyLinesRange struct {
@@ -91,20 +95,52 @@ func guessDivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err
 	return results, nil
 }
 
+func drawHorizontalRedLine(img *image.RGBA, y int) {
+	fmt.Printf("y = %d\n", y)
+	x1 := 0
+	x2 := img.Bounds().Size().X
+	col := color.RGBA{0xff, 0x00, 0x00, 0xff}
+	for ; x1 <= x2; x1++ {
+		//img.Set(x1, y-1, col)
+		img.Set(x1, y, col)
+		//img.Set(x1, y+1, col)
+	}
+}
+
 func main() {
-	img, err := decodeImage("../tmp/keepingtwo01.gif")
+	path := "../tmp/keepingtwo01.gif"
+	img, err := decodeImage(path)
 	if err != nil {
-		fmt.Printf("err = %v\n", err)
-		return
+		log.Fatal(err)
 	}
 	emptyLinesRanges := columnGaps(img)
 	for i, r := range emptyLinesRanges {
 		fmt.Printf("%d: EmptyLinesRange(index=%d, length=%d)\n", i, r.index, r.length)
 	}
-	r, err := guessDivideColumns(emptyLinesRanges)
+
+	divideRanges, err := guessDivideColumns(emptyLinesRanges)
 	if err != nil {
-		fmt.Printf("err = %v\n", err)
-		return
+		log.Fatal(err)
 	}
-	fmt.Printf("guessed column: \v\n", r)
+	fmt.Printf("guessed column: \v\n\n", divideRanges)
+
+	dstImage := image.NewRGBA(img.Bounds())
+	draw.Draw(dstImage, dstImage.Bounds(), img, image.ZP, draw.Src)
+	for _, dr := range divideRanges {
+		y := dr.index + int(dr.length/2)
+		drawHorizontalRedLine(dstImage, y)
+	}
+	path, err = filepath.Abs(path + ".result.jpg")
+	if err != nil {
+		log.Fatal(err)
+	}
+	file, err := os.Create(path)
+	defer file.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = jpeg.Encode(file, dstImage, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
