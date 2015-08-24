@@ -107,11 +107,10 @@ func drawHorizontalRedLine(img *image.RGBA, y int) {
 	}
 }
 
-func main() {
-	path := "../tmp/keepingtwo01.gif"
+func process(path string) error {
 	img, err := decodeImage(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	emptyLinesRanges := columnGaps(img)
 	for i, r := range emptyLinesRanges {
@@ -120,7 +119,7 @@ func main() {
 
 	divideRanges, err := guessDivideColumns(emptyLinesRanges)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Printf("guessed column: \v\n\n", divideRanges)
 
@@ -130,16 +129,63 @@ func main() {
 		y := dr.index + int(dr.length/2)
 		drawHorizontalRedLine(dstImage, y)
 	}
-	path, err = filepath.Abs(path + ".result.jpg")
+	dir, fileName := filepath.Split(path)
+	outputDir := dir + "../image_processor_output/"
+	path, err = filepath.Abs(outputDir + fileName + ".result.jpg")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	file, err := os.Create(path)
 	defer file.Close()
 	if err != nil {
-		log.Fatal(err)
+		if os.IsNotExist(err) {
+			err = os.Mkdir(outputDir, os.FileMode(0755))
+			if err != nil {
+				return err
+			}
+			file, err = os.Create(path)
+		} else {
+			return err
+		}
 	}
 	err = jpeg.Encode(file, dstImage, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func processDir(rootDir string) error {
+	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+
+		fmt.Println(path)
+		rel, err := filepath.Rel(rootDir, path)
+		ext := filepath.Ext(rel)
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+			return nil
+		}
+		p := rootDir + "/" + rel
+		err = process(p)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	/*
+		err := process("../tmp/keepingtwo01.gif")
+	*/
+	err := processDir("../tmp/")
 	if err != nil {
 		log.Fatal(err)
 	}
