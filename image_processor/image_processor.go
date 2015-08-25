@@ -29,7 +29,7 @@ func columnGaps(img image.Image) []EmptyLinesRange {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
 			var mono int
-			if float64(r+g+b)/3.0 < 128 {
+			if float64(r+g+b)/3.0 < float64(0xffff/2) {
 				mono = 0
 			} else {
 				mono = 255
@@ -37,7 +37,6 @@ func columnGaps(img image.Image) []EmptyLinesRange {
 
 			if x == 0 {
 				currentLineValue = 0
-				//				result[index] = false
 				result = append(result, false)
 			}
 
@@ -182,9 +181,8 @@ func processDir(rootDir string) error {
 }
 
 func main() {
-	/*
-		err := process("../tmp/keepingtwo01.gif")
-	*/
+	//err := process("../tmp/keepingtwo16.gif")
+	//err := process("../tmp/keepingtwo15.gif")
 	err := processDir("../tmp/")
 	if err != nil {
 		log.Fatal(err)
