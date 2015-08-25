@@ -14,6 +14,10 @@ import (
 	"path/filepath"
 )
 
+var (
+	DivideColumnsNotFoundError = errors.New("divide columns not found.")
+)
+
 type EmptyLinesRange struct {
 	index  int
 	length int
@@ -89,7 +93,7 @@ func guessDivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err
 		}
 	}
 	if len(results) == 0 {
-		return nil, errors.New("not found")
+		return nil, DivideColumnsNotFoundError
 	}
 	return results, nil
 }
@@ -168,11 +172,11 @@ func processDir(rootDir string) error {
 		}
 		p := rootDir + "/" + rel
 		err = process(p)
-		if err != nil {
+		if err == nil || err == DivideColumnsNotFoundError {
+			return nil
+		} else {
 			return err
 		}
-
-		return nil
 	})
 	if err != nil {
 		return err
@@ -181,8 +185,9 @@ func processDir(rootDir string) error {
 }
 
 func main() {
-	//err := process("../tmp/keepingtwo16.gif")
-	//err := process("../tmp/keepingtwo15.gif")
+	//err := process("../tmp/keepingtwo15.gif") ok
+	//err := process("../tmp/keepingtwo16.gif") !
+	//err := process("../tmp/keeptwo_37a.gif") divide columns not found
 	err := processDir("../tmp/")
 	if err != nil {
 		log.Fatal(err)
