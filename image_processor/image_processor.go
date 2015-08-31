@@ -23,6 +23,53 @@ type EmptyLinesRange struct {
 	length int
 }
 
+type ColumnDivider interface {
+	DivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err error)
+}
+
+type GapSize int
+
+func (g GapSize) DivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err error) {
+	var results []EmptyLinesRange
+	for _, r := range emptyRanges {
+		if r.length > int(g) {
+			results = append(results, r)
+		}
+	}
+	if len(results) == 0 {
+		return nil, DivideColumnsNotFoundError
+	}
+	return results, nil
+}
+
+type FixedGapInfo struct {
+	threshold GapSize
+	fixedGaps []int
+}
+
+func (f FixedGapInfo) DivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err error) {
+	var results []EmptyLinesRange
+	currentGapIndex := 0
+	currentGapCount := -1
+	for _, r := range emptyRanges {
+		if r.length > int(f.threshold) {
+			currentGapCount++
+		}
+		if f.fixedGaps[currentGapIndex] == currentGapCount {
+			results = append(results, r)
+			if currentGapIndex == len(f.fixedGaps)-1 {
+				break
+			}
+			currentGapIndex++
+			currentGapCount = 0
+		}
+	}
+	if len(results) == 0 {
+		return nil, DivideColumnsNotFoundError
+	}
+	return results, nil
+}
+
 func columnGaps(img image.Image) []EmptyLinesRange {
 	bounds := img.Bounds()
 	width := bounds.Size().X
@@ -85,32 +132,19 @@ func decodeImage(filePath string) (img image.Image, err error) {
 	return
 }
 
-func guessDivideColumns(emptyRanges []EmptyLinesRange) (r []EmptyLinesRange, err error) {
-	var results []EmptyLinesRange
-	for _, r := range emptyRanges {
-		if r.length > 30 {
-			results = append(results, r)
-		}
-	}
-	if len(results) == 0 {
-		return nil, DivideColumnsNotFoundError
-	}
-	return results, nil
-}
-
 func drawHorizontalRedLine(img *image.RGBA, y int) {
 	fmt.Printf("y = %d\n", y)
 	x1 := 0
 	x2 := img.Bounds().Size().X
 	col := color.RGBA{0xff, 0x00, 0x00, 0xff}
 	for ; x1 <= x2; x1++ {
-		//img.Set(x1, y-1, col)
+		img.Set(x1, y-1, col)
 		img.Set(x1, y, col)
-		//img.Set(x1, y+1, col)
+		img.Set(x1, y+1, col)
 	}
 }
 
-func process(path string) error {
+func process(path string, columnDivider ColumnDivider) error {
 	img, err := decodeImage(path)
 	if err != nil {
 		return err
@@ -120,7 +154,7 @@ func process(path string) error {
 		fmt.Printf("%d: EmptyLinesRange(index=%d, length=%d)\n", i, r.index, r.length)
 	}
 
-	divideRanges, err := guessDivideColumns(emptyLinesRanges)
+	divideRanges, err := columnDivider.DivideColumns(emptyLinesRanges)
 	if err != nil {
 		return err
 	}
@@ -158,7 +192,7 @@ func process(path string) error {
 	return nil
 }
 
-func processDir(rootDir string) error {
+func processDir(rootDir string, gapSize GapSize) error {
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -171,7 +205,7 @@ func processDir(rootDir string) error {
 			return nil
 		}
 		p := rootDir + "/" + rel
-		err = process(p)
+		err = process(p, ColumnDivider(gapSize))
 		if err == nil || err == DivideColumnsNotFoundError {
 			return nil
 		} else {
@@ -185,10 +219,34 @@ func processDir(rootDir string) error {
 }
 
 func main() {
+	//gapSize := GapSize(48)
 	//err := process("../tmp/keepingtwo15.gif") ok
 	//err := process("../tmp/keepingtwo16.gif") !
 	//err := process("../tmp/keeptwo_37a.gif") divide columns not found
-	err := processDir("../tmp/")
+	// TODO:
+	// - 20,21
+	//err := process("../tmp/keepingtwo20.gif")
+	// - 22: 50では一部大きい
+	//err := process("../tmp/keepingtwo22.gif")
+	// - 24,
+	// x 25: >48では一部大きい
+	//       3つめが狭い。狭さだけで判断できない
+	//err := process("../tmp/keepingtwo25.gif", ColumnDivider(gapSize)) x
+	/*
+		var f FixedGapInfo
+		f.threshold = 19
+		f.fixedGaps = []int{3, 3, 3, 3}
+		err := process("../tmp/keepingtwo25.gif", ColumnDivider(f))
+	*/
+	// - 44a: (1,3,3)だが43bが2なのであってる
+	// - 44b: (3,1)だが45aが2なのであってる
+	// x 51a: (1,2,3)。最初の1,2は合わせて3になるべき。
+	var f FixedGapInfo
+	f.threshold = 17
+	f.fixedGaps = []int{3, 3}
+	err := process("../tmp/keeptwo_51a.gif", ColumnDivider(f))
+
+	//err := processDir("../tmp/", gapSize)
 	if err != nil {
 		log.Fatal(err)
 	}
