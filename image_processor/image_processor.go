@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -147,6 +148,18 @@ func drawHorizontalRedLine(img *image.RGBA, y int) {
 	}
 }
 
+func divideImageVertically(img image.Image, top int, height int) image.Image {
+	h := height
+	if top+height > img.Bounds().Max.Y {
+		h = img.Bounds().Max.Y - top
+	}
+	srcPoint := image.Point{0, top}
+	dstRect := image.Rect(0, 0, img.Bounds().Max.X, h)
+	dstImage := image.NewRGBA(dstRect)
+	draw.Draw(dstImage, dstImage.Bounds(), img, srcPoint, draw.Src)
+	return dstImage
+}
+
 func saveImage(img image.Image, path string) error {
 	file, err := os.Create(path)
 	defer file.Close()
@@ -185,19 +198,39 @@ func process(path string, columnDivider ColumnDivider) error {
 	}
 	fmt.Printf("guessed column: \v\n\n", divideRanges)
 
-	dstImage := image.NewRGBA(img.Bounds())
-	draw.Draw(dstImage, dstImage.Bounds(), img, image.ZP, draw.Src)
-	for _, dr := range divideRanges {
-		y := dr.index + int(dr.length/2)
-		drawHorizontalRedLine(dstImage, y)
-	}
 	dir, fileName := filepath.Split(path)
 	outputDir := dir + "../image_processor_output/"
 	path, err = filepath.Abs(outputDir + fileName + ".result.jpg")
 	if err != nil {
 		return err
 	}
-	return saveImage(dstImage, path)
+
+	dstImage := image.NewRGBA(img.Bounds())
+	draw.Draw(dstImage, dstImage.Bounds(), img, image.ZP, draw.Src)
+	top := 0
+	i := 0
+	for _, dr := range divideRanges {
+		y := dr.index + int(dr.length/2)
+		height := y - top
+		divImage := divideImageVertically(dstImage, top, height)
+		divPath := outputDir + fileName + ".div_" + strconv.Itoa(i) + ".jpg"
+		err := saveImage(divImage, divPath)
+		if err != nil {
+			return err
+		}
+		top = y
+		i++
+	}
+	if top != dstImage.Bounds().Max.Y {
+		height := dstImage.Bounds().Max.Y - top
+		divImage := divideImageVertically(dstImage, top, height)
+		divPath := outputDir + fileName + ".div_" + strconv.Itoa(i) + ".jpg"
+		err := saveImage(divImage, divPath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func processDir(rootDir string, defaultGapSize GapSize, m FileColumnDividerMap) error {
