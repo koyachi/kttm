@@ -147,6 +147,28 @@ func drawHorizontalRedLine(img *image.RGBA, y int) {
 	}
 }
 
+func saveImage(img image.Image, path string) error {
+	file, err := os.Create(path)
+	defer file.Close()
+	if err != nil {
+		if os.IsNotExist(err) {
+			dir, _ := filepath.Split(path)
+			err = os.Mkdir(dir, os.FileMode(0755))
+			if err != nil {
+				return err
+			}
+			file, err = os.Create(path)
+		} else {
+			return err
+		}
+	}
+	err = jpeg.Encode(file, img, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func process(path string, columnDivider ColumnDivider) error {
 	img, err := decodeImage(path)
 	if err != nil {
@@ -175,24 +197,7 @@ func process(path string, columnDivider ColumnDivider) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(path)
-	defer file.Close()
-	if err != nil {
-		if os.IsNotExist(err) {
-			err = os.Mkdir(outputDir, os.FileMode(0755))
-			if err != nil {
-				return err
-			}
-			file, err = os.Create(path)
-		} else {
-			return err
-		}
-	}
-	err = jpeg.Encode(file, dstImage, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return saveImage(dstImage, path)
 }
 
 func processDir(rootDir string, defaultGapSize GapSize, m FileColumnDividerMap) error {
