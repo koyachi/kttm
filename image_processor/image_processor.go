@@ -287,6 +287,20 @@ func main() {
 		f.fixedGaps = []int{3, 3, 3, 3}
 		err := process("../tmp/keepingtwo25.gif", ColumnDivider(f))
 	*/
+
+	// - 33a
+	//g33a := GapSize(44)
+	//err := process("../tmp/keeptwo_33a.gif", ColumnDivider(g33a))
+	// - 41
+	//g41 := GapSize(44)
+	//err := process("../tmp/keeptwo_41.gif", ColumnDivider(g41))
+	// - 42a
+	//g42a := GapSize(44)
+	//err := process("../tmp/keeptwo_42a.gif", ColumnDivider(g42a))
+	// - 56c
+	//g56c := GapSize(42)
+	//err := process("../tmp/keeptwo_56c.gif", ColumnDivider(g56c))
+
 	// - 44a: (1,3,3)だが43bが2なのであってる
 	// - 44b: (3,1)だが45aが2なのであってる
 	// x 51a: (1,2,3)。最初の1,2は合わせて3になるべき。
@@ -296,7 +310,9 @@ func main() {
 		f.fixedGaps = []int{3, 3}
 		err := process("../tmp/keeptwo_51a.gif", ColumnDivider(f))
 	*/
-	g20 := GapSize(59)
+	gap59 := GapSize(59)
+	gap44 := GapSize(44)
+	gap42 := GapSize(42)
 	var f25 FixedGapInfo
 	f25.threshold = 19
 	f25.fixedGaps = []int{3, 3, 3, 3}
@@ -304,7 +320,11 @@ func main() {
 	f51a.threshold = 17
 	f51a.fixedGaps = []int{3, 3}
 	m := FileColumnDividerMap{
-		"keepingtwo20.gif": g20,
+		"keepingtwo20.gif": gap59,
+		"keeptwo_33a.gif":  gap44,
+		"keeptwo_41.gif":   gap44,
+		"keeptwo_42a.gif":  gap44,
+		"keeptwo_56c.gif":  gap42,
 		"keepingtwo25.gif": ColumnDivider(f25),
 		"keeptwo_51a.gif":  ColumnDivider(f51a),
 	}
