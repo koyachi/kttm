@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/draw"
 	_ "image/gif"
-	_ "image/jpeg"
+	"image/jpeg"
 	"io/ioutil"
 	"log"
 	"math"
@@ -25,6 +26,29 @@ func decodeImage(filePath string) (img image.Image, err error) {
 
 	img, _, err = image.Decode(reader)
 	return
+}
+
+// TODO:move to utility package
+func saveImage(img image.Image, path string) error {
+	file, err := os.Create(path)
+	defer file.Close()
+	if err != nil {
+		if os.IsNotExist(err) {
+			dir, _ := filepath.Split(path)
+			err = os.Mkdir(dir, os.FileMode(0755))
+			if err != nil {
+				return err
+			}
+			file, err = os.Create(path)
+		} else {
+			return err
+		}
+	}
+	err = jpeg.Encode(file, img, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type UrlIndex struct {
@@ -58,6 +82,39 @@ func (b ByIndex) Less(i, j int) bool {
 type Page struct {
 	index     int
 	divImages []string
+}
+
+func (p *Page) concatImages() error {
+	width := 0
+	height := 0
+	for _, i := range p.divImages {
+		img, err := decodeImage(i)
+		if err != nil {
+			return err
+		}
+		height += img.Bounds().Size().Y
+		if width < img.Bounds().Size().X {
+			width = img.Bounds().Size().X
+		}
+	}
+	dstRect := image.Rect(0, 0, width, height)
+	dstImage := image.NewRGBA(dstRect)
+	top := 0
+	for _, i := range p.divImages {
+		img, err := decodeImage(i)
+		if err != nil {
+			return err
+		}
+		srcPoint := image.Point{0, 0}
+		dstRect := image.Rect(0, top, img.Bounds().Size().X, top+img.Bounds().Size().Y)
+		draw.Draw(dstImage, dstRect, img, srcPoint, draw.Src)
+		top += img.Bounds().Size().Y
+	}
+	return saveImage(dstImage, p.imagePath())
+}
+
+func (p *Page) imagePath() string {
+	return "../binder_output/page_" + strconv.Itoa(p.index) + ".jpg"
 }
 
 func parseJson(path string) (u []*UrlIndex, err error) {
@@ -138,19 +195,21 @@ func collectPages(urlIndexes []*UrlIndex) (pages []*Page, err error) {
 	return pages, nil
 }
 
-func generateIndexHtml(p []*Page) string {
+func generateIndexHtml(p []*Page) (string, error) {
 	result := "<html><head><title>kttm index</title></head><body>\n"
 	for _, v := range p {
 		result += "<center>"
 		// debug
 		//result += "<p>" + strconv.Itoa(v.index) + "</p>"
-		for _, i := range v.divImages {
-			result += "<img src='" + i + "' /><br/>\n"
+		err := v.concatImages()
+		if err != nil {
+			return "", err
 		}
+		result += "<img src='" + v.imagePath() + "' /><br/>\n"
 		result += "</center>\n"
 	}
 	result += "</body></html>"
-	return result
+	return result, nil
 }
 
 func main() {
@@ -168,5 +227,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Print(generateIndexHtml(pages))
+	pageHtml, err := generateIndexHtml(pages)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Print(pageHtml)
 }
