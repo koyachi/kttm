@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/koyachi/kttm/utility"
 	"image"
 	"image/color"
 	"image/draw"
@@ -19,21 +20,6 @@ import (
 var (
 	DivideColumnsNotFoundError = errors.New("divide columns not found.")
 )
-
-// TODO: move to utility package
-type Config struct {
-	srcDir                  string
-	imageProcessorOutputDir string
-	binderOutputDir         string
-}
-
-func NewConfig() Config {
-	return Config{
-		srcDir:                  "../data/src/",
-		imageProcessorOutputDir: "../data/image_processor_output/",
-		binderOutputDir:         "../data/binder_output",
-	}
-}
 
 type EmptyLinesRange struct {
 	index  int
@@ -197,7 +183,7 @@ func saveImage(img image.Image, path string) error {
 	return nil
 }
 
-func process(config Config, path string, columnDivider ColumnDivider) error {
+func process(config utility.Config, path string, columnDivider ColumnDivider) error {
 	img, err := decodeImage(path)
 	if err != nil {
 		return err
@@ -214,7 +200,7 @@ func process(config Config, path string, columnDivider ColumnDivider) error {
 	fmt.Printf("guessed column: \v\n\n", divideRanges)
 
 	_, fileName := filepath.Split(path)
-	outputDir := config.imageProcessorOutputDir
+	outputDir := config.ImageProcessorOutputDir
 	path, err = filepath.Abs(outputDir + fileName + ".result.jpg")
 	if err != nil {
 		return err
@@ -248,14 +234,14 @@ func process(config Config, path string, columnDivider ColumnDivider) error {
 	return nil
 }
 
-func processDir(config Config, defaultGapSize GapSize, m FileColumnDividerMap) error {
-	err := filepath.Walk(config.srcDir, func(path string, info os.FileInfo, err error) error {
+func processDir(config utility.Config, defaultGapSize GapSize, m FileColumnDividerMap) error {
+	err := filepath.Walk(config.SrcDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
 
 		fmt.Println(path)
-		rel, err := filepath.Rel(config.srcDir, path)
+		rel, err := filepath.Rel(config.SrcDir, path)
 		ext := filepath.Ext(rel)
 		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
 			return nil
@@ -269,7 +255,7 @@ func processDir(config Config, defaultGapSize GapSize, m FileColumnDividerMap) e
 		if divider == nil {
 			divider = ColumnDivider(defaultGapSize)
 		}
-		p := config.srcDir + "/" + rel
+		p := config.SrcDir + "/" + rel
 		err = process(config, p, divider)
 		if err == nil || err == DivideColumnsNotFoundError {
 			return nil
@@ -284,7 +270,7 @@ func processDir(config Config, defaultGapSize GapSize, m FileColumnDividerMap) e
 }
 
 func main() {
-	config := NewConfig()
+	config := utility.NewConfig()
 	//err := process("../data/src/keepingtwo15.gif") ok
 	//err := process("../data/src/keepingtwo16.gif") !
 	//err := process("../data/src/keeptwo_37a.gif") divide columns not found
