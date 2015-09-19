@@ -7,9 +7,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	_ "image/gif"
-	"image/jpeg"
-	_ "image/png"
 	"log"
 	"os"
 	"path/filepath"
@@ -126,17 +123,6 @@ func columnGaps(img image.Image) []EmptyLinesRange {
 	return emptyRanges
 }
 
-func decodeImage(filePath string) (img image.Image, err error) {
-	reader, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	img, _, err = image.Decode(reader)
-	return
-}
-
 func drawHorizontalRedLine(img *image.RGBA, y int) {
 	fmt.Printf("y = %d\n", y)
 	x1 := 0
@@ -161,30 +147,8 @@ func divideImageVertically(img image.Image, top int, height int) image.Image {
 	return dstImage
 }
 
-func saveImage(img image.Image, path string) error {
-	file, err := os.Create(path)
-	defer file.Close()
-	if err != nil {
-		if os.IsNotExist(err) {
-			dir, _ := filepath.Split(path)
-			err = os.Mkdir(dir, os.FileMode(0755))
-			if err != nil {
-				return err
-			}
-			file, err = os.Create(path)
-		} else {
-			return err
-		}
-	}
-	err = jpeg.Encode(file, img, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func process(config utility.Config, path string, columnDivider ColumnDivider) error {
-	img, err := decodeImage(path)
+	img, err := utility.DecodeImage(path)
 	if err != nil {
 		return err
 	}
@@ -215,7 +179,7 @@ func process(config utility.Config, path string, columnDivider ColumnDivider) er
 		height := y - top
 		divImage := divideImageVertically(dstImage, top, height)
 		divPath := outputDir + fileName + ".div_" + strconv.Itoa(i) + ".jpg"
-		err := saveImage(divImage, divPath)
+		err := utility.SaveImage(divImage, divPath)
 		if err != nil {
 			return err
 		}
@@ -226,7 +190,7 @@ func process(config utility.Config, path string, columnDivider ColumnDivider) er
 		height := dstImage.Bounds().Max.Y - top
 		divImage := divideImageVertically(dstImage, top, height)
 		divPath := outputDir + fileName + ".div_" + strconv.Itoa(i) + ".jpg"
-		err := saveImage(divImage, divPath)
+		err := utility.SaveImage(divImage, divPath)
 		if err != nil {
 			return err
 		}

@@ -3,10 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/koyachi/kttm/utility"
 	"image"
 	"image/draw"
-	_ "image/gif"
-	"image/jpeg"
 	"io/ioutil"
 	"log"
 	"math"
@@ -15,41 +14,6 @@ import (
 	"sort"
 	"strconv"
 )
-
-// TODO:move to utility package
-func decodeImage(filePath string) (img image.Image, err error) {
-	reader, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	img, _, err = image.Decode(reader)
-	return
-}
-
-// TODO:move to utility package
-func saveImage(img image.Image, path string) error {
-	file, err := os.Create(path)
-	defer file.Close()
-	if err != nil {
-		if os.IsNotExist(err) {
-			dir, _ := filepath.Split(path)
-			err = os.Mkdir(dir, os.FileMode(0755))
-			if err != nil {
-				return err
-			}
-			file, err = os.Create(path)
-		} else {
-			return err
-		}
-	}
-	err = jpeg.Encode(file, img, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 type UrlIndex struct {
 	index     int
@@ -88,7 +52,7 @@ func (p *Page) concatImages() error {
 	width := 0
 	height := 0
 	for _, i := range p.divImages {
-		img, err := decodeImage(i)
+		img, err := utility.DecodeImage(i)
 		if err != nil {
 			return err
 		}
@@ -101,7 +65,7 @@ func (p *Page) concatImages() error {
 	dstImage := image.NewRGBA(dstRect)
 	top := 0
 	for _, i := range p.divImages {
-		img, err := decodeImage(i)
+		img, err := utility.DecodeImage(i)
 		if err != nil {
 			return err
 		}
@@ -110,7 +74,7 @@ func (p *Page) concatImages() error {
 		draw.Draw(dstImage, dstRect, img, srcPoint, draw.Src)
 		top += img.Bounds().Size().Y
 	}
-	return saveImage(dstImage, p.imagePath())
+	return utility.SaveImage(dstImage, p.imagePath())
 }
 
 func (p *Page) imagePath() string {
@@ -174,7 +138,7 @@ func collectPages(urlIndexes []*UrlIndex) (pages []*Page, err error) {
 	for _, u := range urlIndexes {
 		for _, imgPath := range u.images() {
 			//fmt.Printf("imgPath = %s\n", imgPath)
-			img, err := decodeImage(imgPath)
+			img, err := utility.DecodeImage(imgPath)
 			if err != nil {
 				return nil, err
 			}
