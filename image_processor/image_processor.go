@@ -20,6 +20,21 @@ var (
 	DivideColumnsNotFoundError = errors.New("divide columns not found.")
 )
 
+// TODO: move to utility package
+type Config struct {
+	srcDir                  string
+	imageProcessorOutputDir string
+	binderOutputDir         string
+}
+
+func NewConfig() Config {
+	return Config{
+		srcDir:                  "../data/src/",
+		imageProcessorOutputDir: "../data/image_processor_output/",
+		binderOutputDir:         "../data/binder_output",
+	}
+}
+
 type EmptyLinesRange struct {
 	index  int
 	length int
@@ -182,7 +197,7 @@ func saveImage(img image.Image, path string) error {
 	return nil
 }
 
-func process(path string, columnDivider ColumnDivider) error {
+func process(config Config, path string, columnDivider ColumnDivider) error {
 	img, err := decodeImage(path)
 	if err != nil {
 		return err
@@ -198,8 +213,8 @@ func process(path string, columnDivider ColumnDivider) error {
 	}
 	fmt.Printf("guessed column: \v\n\n", divideRanges)
 
-	dir, fileName := filepath.Split(path)
-	outputDir := dir + "../image_processor_output/"
+	_, fileName := filepath.Split(path)
+	outputDir := config.imageProcessorOutputDir
 	path, err = filepath.Abs(outputDir + fileName + ".result.jpg")
 	if err != nil {
 		return err
@@ -233,14 +248,14 @@ func process(path string, columnDivider ColumnDivider) error {
 	return nil
 }
 
-func processDir(rootDir string, defaultGapSize GapSize, m FileColumnDividerMap) error {
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+func processDir(config Config, defaultGapSize GapSize, m FileColumnDividerMap) error {
+	err := filepath.Walk(config.srcDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
 
 		fmt.Println(path)
-		rel, err := filepath.Rel(rootDir, path)
+		rel, err := filepath.Rel(config.srcDir, path)
 		ext := filepath.Ext(rel)
 		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
 			return nil
@@ -254,8 +269,8 @@ func processDir(rootDir string, defaultGapSize GapSize, m FileColumnDividerMap) 
 		if divider == nil {
 			divider = ColumnDivider(defaultGapSize)
 		}
-		p := rootDir + "/" + rel
-		err = process(p, divider)
+		p := config.srcDir + "/" + rel
+		err = process(config, p, divider)
 		if err == nil || err == DivideColumnsNotFoundError {
 			return nil
 		} else {
@@ -269,37 +284,38 @@ func processDir(rootDir string, defaultGapSize GapSize, m FileColumnDividerMap) 
 }
 
 func main() {
-	//err := process("../tmp/keepingtwo15.gif") ok
-	//err := process("../tmp/keepingtwo16.gif") !
-	//err := process("../tmp/keeptwo_37a.gif") divide columns not found
+	config := NewConfig()
+	//err := process("../data/src/keepingtwo15.gif") ok
+	//err := process("../data/src/keepingtwo16.gif") !
+	//err := process("../data/src/keeptwo_37a.gif") divide columns not found
 	// TODO:
 	// - 20,21
-	//err := process("../tmp/keepingtwo20.gif", GapSize(59))
+	//err := process("../data/src/keepingtwo20.gif", GapSize(59))
 	// - 22: 50では一部大きい
-	//err := process("../tmp/keepingtwo22.gif")
+	//err := process("../data/src/keepingtwo22.gif")
 	// - 24,
 	// x 25: >48では一部大きい
 	//       3つめが狭い。狭さだけで判断できない
-	//err := process("../tmp/keepingtwo25.gif", ColumnDivider(gapSize)) x
+	//err := process("../data/src/keepingtwo25.gif", ColumnDivider(gapSize)) x
 	/*
 		var f FixedGapInfo
 		f.threshold = 19
 		f.fixedGaps = []int{3, 3, 3, 3}
-		err := process("../tmp/keepingtwo25.gif", ColumnDivider(f))
+		err := process("../data/src/keepingtwo25.gif", ColumnDivider(f))
 	*/
 
 	// - 33a
 	//g33a := GapSize(44)
-	//err := process("../tmp/keeptwo_33a.gif", ColumnDivider(g33a))
+	//err := process("../data/src/keeptwo_33a.gif", ColumnDivider(g33a))
 	// - 41
 	//g41 := GapSize(44)
-	//err := process("../tmp/keeptwo_41.gif", ColumnDivider(g41))
+	//err := process("../data/src/keeptwo_41.gif", ColumnDivider(g41))
 	// - 42a
 	//g42a := GapSize(44)
-	//err := process("../tmp/keeptwo_42a.gif", ColumnDivider(g42a))
+	//err := process("../data/src/keeptwo_42a.gif", ColumnDivider(g42a))
 	// - 56c
 	//g56c := GapSize(42)
-	//err := process("../tmp/keeptwo_56c.gif", ColumnDivider(g56c))
+	//err := process("../data/src/keeptwo_56c.gif", ColumnDivider(g56c))
 
 	// - 44a: (1,3,3)だが43bが2なのであってる
 	// - 44b: (3,1)だが45aが2なのであってる
@@ -308,7 +324,7 @@ func main() {
 		var f FixedGapInfo
 		f.threshold = 17
 		f.fixedGaps = []int{3, 3}
-		err := process("../tmp/keeptwo_51a.gif", ColumnDivider(f))
+		err := process("../data/src/keeptwo_51a.gif", ColumnDivider(f))
 	*/
 	gap59 := GapSize(59)
 	gap44 := GapSize(44)
@@ -329,7 +345,7 @@ func main() {
 		"keeptwo_51a.gif":  ColumnDivider(f51a),
 	}
 	defaultGapSize := GapSize(48)
-	err := processDir("../tmp/", defaultGapSize, m)
+	err := processDir(config, defaultGapSize, m)
 	if err != nil {
 		log.Fatal(err)
 	}
