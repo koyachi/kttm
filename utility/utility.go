@@ -19,7 +19,7 @@ func NewConfig() Config {
 	return Config{
 		SrcDir:                  "../data/src/",
 		ImageProcessorOutputDir: "../data/image_processor_output/",
-		BinderOutputDir:         "../data/binder_output",
+		BinderOutputDir:         "../data/binder_output/",
 	}
 }
 

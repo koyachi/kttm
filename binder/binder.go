@@ -15,6 +15,10 @@ import (
 	"strconv"
 )
 
+var (
+	Config = utility.NewConfig()
+)
+
 type UrlIndex struct {
 	index     int
 	url       string
@@ -26,7 +30,7 @@ func (u *UrlIndex) images() []string {
 		return u.divImages
 	} else {
 		_, fileName := filepath.Split(u.url)
-		return []string{"../tmp/" + fileName}
+		return []string{Config.SrcDir + fileName}
 	}
 }
 
@@ -78,7 +82,7 @@ func (p *Page) concatImages() error {
 }
 
 func (p *Page) imagePath() string {
-	return "../binder_output/page_" + strconv.Itoa(p.index) + ".jpg"
+	return Config.BinderOutputDir + "page_" + strconv.Itoa(p.index) + ".jpg"
 }
 
 func parseJson(path string) (u []*UrlIndex, err error) {
@@ -110,7 +114,7 @@ func parseJson(path string) (u []*UrlIndex, err error) {
 }
 
 func searchDivImages(urlIndexes []*UrlIndex) error {
-	inputDir := "../image_processor_output/"
+	inputDir := Config.ImageProcessorOutputDir
 	for _, u := range urlIndexes {
 		var divImages []string
 		_, fileName := filepath.Split(u.url)
@@ -177,7 +181,7 @@ func generateIndexHtml(p []*Page) (string, error) {
 }
 
 func main() {
-	urlIndexes, err := parseJson("../tmp/urlIndex.json")
+	urlIndexes, err := parseJson(Config.SrcDir + "urlIndex.json")
 	if err != nil {
 		log.Fatal(err)
 	}
