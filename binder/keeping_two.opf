@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package unique-identifier="uid">
+  <metadata>
+    <dc-metadata xmlns:dc="http://purl.org/metadata/dublin_core" xmlns:oebpackage="http://openebook.org/namespaces/oeb-package/1.0/">
+
+      <dc:Title>Keeping Two</dc:Title>
+      <dc:Language>en-us</dc:Language>
+      <dc:Creator>Jordan Crane</dc:Creator>
+      <dc:Description>http://whatthingsdo.com/comic/keeping-two/</dc:Description>
+      <dc:Date>12/18/2001</dc:Date>
+    </dc-metadata>
+    <x-metadata>
+      <output encoding="utf-8" content-type="text/x-oeb1-document">
+      </output>
+      <EmbeddedCover>KeepingTwo1B1.png</EmbeddedCover>
+      <SRP Currency="USD">20</SRP>
+    </x-metadata>
+  </metadata>
+  <manifest>
+    <item id="item1" media-type="text/x-oeb1-document" href="index.html"></item>
+  </manifest>
+  <spine toc="toc">
+    <itemref idref="item1" />
+  </spine>
+  <tours></tours>
+</package>
